@@ -1,0 +1,89 @@
+https://bitcointalk.org/index.php?topic=2957.0
+
+lic void signInputs(@NotNull SigHash hashType, @NotNull Wallet wallet) throws ScriptException {
+        assert inputs.size() > 0;
+        assert outputs.size() > 0;
+
+        // I don't currently have an easy way to test other modes work, as the official client does not use them.
+        assert hashType == SigHash.ALL;
+
+        // The transaction is signed with the input scripts empty except for the input we are signing. In the case
+        // where addInput has been used to set up a new transaction, they are already all empty. The input being signed
+        // has to have the connected OUTPUT program in it when the hash is calculated!
+        //
+        // Note that each input may be claiming an output sent to a different key. So we have to look at the outputs
+        // to figure out which key to sign with.
+
+        byte[][] signatures = new byte[inputs.size()][];
+        ECKey[] signingKeys = new ECKey[inputs.size()];
+        for (int i = 0; i < inputs.size(); i++) {
+            TransactionInput input = inputs.get(i);
+            assert input.scriptBytes.length == 0 : "Attempting to sign a non-fresh transaction";
+            // Set the input to the script of its output.
+            input.scriptBytes = input.outpoint.getConnectedPubKeyScript();
+            // Find the signing key we'll need to use.
+            byte[] connectedPubKeyHash = input.outpoint.getConnectedPubKeyHash();
+            ECKey key = wallet.findKeyFromPubHash(connectedPubKeyHash);
+            // This assert should never fire. If it does, it means the wallet is inconsistent.
+            assert key != null : "Transaction exists in wallet that we cannot redeem: " + Utils.bytesToHexString(connectedPubKeyHash);
+            // Keep the key around for the script creation step below.
+            signingKeys[i] = key;
+            // The anyoneCanPay feature isn't used at the moment.
+            boolean anyoneCanPay = false;
+            byte[] hash = hashTransactionForSignature(hashType, anyoneCanPay);
+            Utils.LOG("  signInputs hash=" + Utils.bytesToHexString(hash));
+            // Set the script to empty again for the next input.
+            input.scriptBytes = TransactionInput.EMPTY_ARRAY;
+
+            // Now sign for the output so we can redeem it. We use the keypair to sign the hash,
+            // and then put the resulting signature in the script along with the public key (below).
+            try {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                bos.write(key.sign(hash));
+                bos.write((hashType.ordinal() + 1) | (anyoneCanPay ? 0x80 : 0)) ;
+                signatures[i] = bos.toByteArray();
+            } catch (IOException e) {
+                throw new RuntimeException(e);  // Cannot happen.
+            }
+        }
+
+        // Now we have calculated each signature, go through and create the scripts. Reminder: the script consists of
+        // a signature (over a hash of the transaction) and the complete public key needed to sign for the connected
+        // output.
+        for (int i = 0; i < inputs.size(); i++) {
+            TransactionInput input = inputs.get(i);
+            assert input.scriptBytes.length == 0;
+            ECKey key = signingKeys[i];
+            input.scriptBytes = Script.createInputScript(signatures[i], key.getPubKey());
+        }
+
+        // Every input is now complete.
+    }
+Hal
+VIP
+Sr. Member
+*
+expert
+
+
+Activity: 314
+Merit: 682
+
+
+
+
+View Profile
+	
+Re: Can someone explain the details of how OP_CHECKSIG operates?
+January 27, 2011, 12:16:08 AM
+ #15
+What you are doing looks pretty good to me now that I understand it better. I tried hashing your data and got 90377525e05bd71ce8ba413a84fdaea299766732f165fab28a69d30c83337f9b, don't know if that matches yours. The only other thing I can think of would be to try reversing the hash on input to the ECDSA functions.
+Hal Finney
+0x6763
+Guest
+
+	
+Re: Can someone explain the details of how OP_CHECKSIG operates?
+January 27, 2011, 02:24:41 AM
+ #16
+Quote from: Hal on January 27, 2011, 12:16:08 AM
