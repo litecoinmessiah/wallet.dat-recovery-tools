@@ -1,0 +1,48 @@
+
+	
+Re: [SOLVED] Can someone explain the details of how OP_CHECKSIG operates?
+January 27, 2011, 07:53:47 PM
+ #25
+I'm going to mark this thread as solved since the OP_CHECKSIG stuff is all figured out now.
+
+I'll start a new thread for BouncyCastle related stuff.
+Hal
+VIP
+Sr. Member
+*
+expert
+
+
+Activity: 314
+Merit: 682
+
+
+
+
+View Profile
+	
+Re: Can someone explain the details of how OP_CHECKSIG operates?
+January 27, 2011, 07:54:32 PM
+ #26
+I was able to verify the signature using the openssl command line and a bunch of cutting and pasting of hex dumps. The data input to the hash is
+Code:
+01 00 00 00 03 30 f3 70  1f 9b c4 64 55 2f 70 49  |.....0.p...dU/pI|
+57 91 04 08 17 ce 77 7a  d5 ed e1 6e 52 9f cd 0c  |W.....wz...nR...|
+0e 94 91 56 94 00 00 00  00 19 76 a9 14 02 bf 4b  |...V......v....K|
+28 89 c6 ad a8 19 0c 25  2e 70 bd e1 a1 90 9f 96  |(......%.p......|
+17 88 ac ff ff ff ff 72  14 2b f7 68 6c e9 2c 6d  |.......r.+.hl.,m|
+e5 b7 33 65 bf b9 d5 9b  b6 0c 2c 80 98 2d 59 58  |..3e......,..-YX|
+c1 e6 a3 b0 8e a6 89 00  00 00 00 00 ff ff ff ff  |................|
+d2 81 28 bb b6 20 7c 1c  3d 0a 63 0c c6 19 dc 7e  |..(.. |.=.c....~|
+7b ea 56 ac 19 a1 da b1  27 c6 2c 78 fa 1b 63 2c  |{.V.....'.,x..c,|
+00 00 00 00 00 ff ff ff  ff 01 00 a6 f7 5f 02 00  |............._..|
+00 00 19 76 a9 14 9e 35  d9 3c 77 92 bd ca ad 56  |...v...5.<w....V|
+97 dd eb f0 43 53 d9 a5  e1 96 88 ac 00 00 00 00  |....CS..........|
+01 00 00 00                                       |....|
+
+and the hash is
+
+e8a875b4a6b23e507cdad56d1d74285f22fec05bfd6be2f737923c43fcc23987
+
+If you have this value, it is correct, and you can look elsewhere.
+Hal Finney
